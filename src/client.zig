@@ -254,7 +254,7 @@ pub fn TLSClientImpl(comptime ReaderType: type, comptime WriterType: type, compt
                 p.deinit();
             }
             if (self.tcp_client) |tc| {
-                std.os.shutdown(tc.handle, .both) catch |err| {
+                std.posix.shutdown(tc.handle, .both) catch |err| {
                     log.warn("failed to shutdown tcp client err={}", .{err});
                 };
             }
@@ -373,7 +373,7 @@ pub fn TLSClientImpl(comptime ReaderType: type, comptime WriterType: type, compt
             if (list.addrs.len == 0) return error.UnknownHostName;
 
             for (list.addrs) |addr| {
-                if (addr.any.family != std.os.AF.INET) {
+                if (addr.any.family != std.posix.AF.INET) {
                     continue;
                 }
                 // TODO: ipv6
@@ -391,7 +391,7 @@ pub fn TLSClientImpl(comptime ReaderType: type, comptime WriterType: type, compt
 
                 return;
             }
-            return std.os.ConnectError.ConnectionRefused;
+            return std.posix.ConnectError.ConnectionRefused;
         }
 
         pub fn connect(self: *Self, host: []const u8, port: u16) !void {
@@ -531,7 +531,7 @@ pub fn TLSClientImpl(comptime ReaderType: type, comptime WriterType: type, compt
         pub fn close(self: *Self) !void {
             defer {
                 if (self.tcp_client) |tc| {
-                    std.os.shutdown(tc.handle, .both) catch {
+                    std.posix.shutdown(tc.handle, .both) catch {
                         //TODO Error handle
                     };
                 }

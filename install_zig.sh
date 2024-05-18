@@ -10,18 +10,19 @@ case "$unames" in
     *)          echo "Unknown HOST_ARCH=$(uname -s)"; exit 1;;
 esac
 
+ZIG_VERSION=0.12.0
 ZIG_VERSIONS=$(curl https://ziglang.org/download/index.json)
 
-ZIG_MASTER_TAR=$(echo $ZIG_VERSIONS | jq -r ".master.\"$HOST_ARCH\".tarball")
-ZIG_MASTER_SHA256=$(echo $ZIG_VERSIONS | jq -r ".master.\"$HOST_ARCH\".shasum")
+ZIG_MASTER_TAR=$(echo $ZIG_VERSIONS | jq -r ".\"$ZIG_VERSION\".\"$HOST_ARCH\".tarball")
+ZIG_MASTER_SHA256=$(echo $ZIG_VERSIONS | jq -r ".\"$ZIG_VERSION\".\"$HOST_ARCH\".shasum")
 
-ZIG_TAR_NAME="zig-master.tar.xz"
+ZIG_TAR_NAME="zig-$ZIG_VERSION.tar.xz"
 
 if [ -e $ZIG_TAR_NAME ]; then
     rm $ZIG_TAR_NAME
 fi
 
-curl $ZIG_MASTER_TAR -o zig-master.tar.xz
+curl $ZIG_MASTER_TAR -o $ZIG_TAR_NAME 
 TAR_SHA256=$(shasum -a 256 $ZIG_TAR_NAME | awk '{print $1}')
 if [ "$TAR_SHA256" != "$ZIG_MASTER_SHA256" ]; then
     echo "Invalid SHASUM!"

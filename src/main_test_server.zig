@@ -1,6 +1,6 @@
 const std = @import("std");
 const log = @import("log.zig");
-const os = std.os;
+const posix = std.posix;
 
 const server = @import("server.zig");
 
@@ -15,12 +15,12 @@ fn handler_sigchld(signum: c_int) callconv(.C) void {
 
 pub fn do(fork: bool, allocator: std.mem.Allocator) !void {
     // ignore SIGCHLD
-    var act = os.Sigaction{
+    var act = posix.Sigaction{
         .handler = .{ .handler = handler_sigchld },
-        .mask = os.empty_sigset,
-        .flags = (os.SA.SIGINFO | os.SA.RESTART | os.SA.RESETHAND),
+        .mask = posix.empty_sigset,
+        .flags = (posix.SA.SIGINFO | posix.SA.RESTART | posix.SA.RESETHAND),
     };
-    try os.sigaction(os.SIG.CHLD, &act, null);
+    try posix.sigaction(posix.SIG.CHLD, &act, null);
 
     log.info("started.", .{});
 
@@ -41,7 +41,7 @@ pub fn do(fork: bool, allocator: std.mem.Allocator) !void {
         var con = try tls_server.accept();
         defer con.deinit();
         if (fork) {
-            const fork_pid = std.os.fork() catch {
+            const fork_pid = std.posix.fork() catch {
                 log.err("fork failed", .{});
                 return;
             };

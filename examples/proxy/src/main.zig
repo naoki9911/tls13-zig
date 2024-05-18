@@ -1,7 +1,7 @@
 const std = @import("std");
 const net = std.net;
 const io = std.io;
-const os = std.os;
+const posix = std.posix;
 const allocator = std.heap.page_allocator;
 
 const server = @import("tls13-server");
@@ -9,12 +9,12 @@ const log = server.log;
 
 pub fn main() !void {
     // ignore SIGCHLD
-    var act = os.Sigaction{
-        .handler = .{ .handler = os.SIG.IGN },
-        .mask = os.empty_sigset,
-        .flags = (os.SA.SIGINFO | os.SA.RESTART | os.SA.RESETHAND),
+    var act = posix.Sigaction{
+        .handler = .{ .handler = posix.SIG.IGN },
+        .mask = posix.empty_sigset,
+        .flags = (posix.SA.SIGINFO | posix.SA.RESTART | posix.SA.RESETHAND),
     };
-    try os.sigaction(os.SIG.CHLD, &act, null);
+    try posix.sigaction(posix.SIG.CHLD, &act, null);
 
     const key_file = try getenvWithError("PROXY_TLS_KEYFILE");
     const cert_file = try getenvWithError("PROXY_TLS_CERTFILE");
@@ -34,7 +34,7 @@ pub fn main() !void {
     while (true) {
         var con = try tls_server.accept();
         defer con.deinit();
-        const fork_pid = std.os.fork() catch {
+        const fork_pid = posix.fork() catch {
             log.err("fork failed", .{});
             return;
         };
@@ -55,15 +55,15 @@ pub fn main() !void {
         var conStream = try net.tcpConnectToHost(allocator, upstream_host, upstream_port);
         defer conStream.close();
 
-        var fds: [2]std.os.pollfd = undefined;
+        var fds: [2]posix.pollfd = undefined;
         fds[0] = .{
             .fd = con.tcp_conn.?.stream.handle,
-            .events = std.os.POLL.IN,
+            .events = posix.POLL.IN,
             .revents = undefined,
         };
         fds[1] = .{
             .fd = conStream.handle,
-            .events = std.os.POLL.IN,
+            .events = posix.POLL.IN,
             .revents = undefined,
         };
 
@@ -71,12 +71,12 @@ pub fn main() !void {
         var req_done = false;
         var sendBuf = std.io.bufferedWriter(conStream.writer());
         while (true) {
-            _ = try std.os.poll(&fds, -1);
+            _ = try posix.poll(&fds, -1);
             log.debug("poll done", .{});
             var recv_bytes: [16 * 1024]u8 = undefined;
             var tmp_buf: [16 * 1024]u8 = undefined;
 
-            if ((fds[0].revents & std.os.POLL.IN) > 0) {
+            if ((fds[0].revents & posix.POLL.IN) > 0) {
                 while (true) {
                     const line = con.tlsReader().readUntilDelimiter(&tmp_buf, '\n') catch |err| {
                         log.err("failed to read({})", .{err});
@@ -116,7 +116,7 @@ pub fn main() !void {
                     try sendBuf.flush();
                     req_done = false;
                 }
-            } else if ((fds[1].revents & std.os.POLL.IN) > 0) {
+            } else if ((fds[1].revents & posix.POLL.IN) > 0) {
                 const recv_size = try conStream.read(&recv_bytes);
                 if (recv_size == 0) {
                     log.info("upstream connection closed", .{});
@@ -133,7 +133,7 @@ pub fn main() !void {
 }
 
 fn getenvWithError(key: []const u8) ![]const u8 {
-    const res = std.os.getenv(key);
+    const res = posix.getenv(key);
     if (res) |r| {
         return r;
     } else {

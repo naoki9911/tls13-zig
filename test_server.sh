@@ -13,6 +13,16 @@ trap cleanup EXIT
 cd $(dirname $0)
 
 cd test
+
+# macos uses libressl as an alias for openssl.
+# libressl does not have dh parameter x448.
+unames=$(uname -s)
+case "$unames" in
+    Linux*)     DH_X448="x448:";;
+    Darwin*)    DH_X448="";;
+    *)          echo "Unknown HOST_ARCH=$(uname -s)"; exit 1;;
+esac
+
 # Generate testing certificate
 ./gen_cert.sh
 
@@ -39,14 +49,14 @@ else
 fi
 
 # Testing Hello Retry Request
-echo "GET / " | openssl s_client -groups x448:x25519 -servername localhost -connect localhost:8443 -ign_eof | grep tls13-zig
+echo "GET / " | openssl s_client -groups ${DH_X448}X25519 -servername localhost -connect localhost:8443 -ign_eof | grep tls13-zig
 if [ $? -eq 0 ]; then
     echo "OK"
 else
     echo "FAILED"
 fi
 
-echo "GET / " | openssl s_client -groups x448:secp256r1 -servername localhost -connect localhost:8443 -ign_eof | grep tls13-zig
+echo "GET / " | openssl s_client -groups ${DH_X448}secp256r1 -servername localhost -connect localhost:8443 -ign_eof | grep tls13-zig
 if [ $? -eq 0 ]; then
     echo "OK"
 else
@@ -69,14 +79,14 @@ else
 fi
 
 # Testing Resumption with Hello Retry Request
-echo "GET / " | openssl s_client -groups x448:x25519 -servername localhost -connect localhost:8443 -ign_eof -sess_out sess.pem | grep tls13-zig
+echo "GET / " | openssl s_client -groups ${DH_X448}X25519 -servername localhost -connect localhost:8443 -ign_eof -sess_out sess.pem | grep tls13-zig
 if [ $? -eq 0 ]; then
     echo "OK"
 else
     echo "FAILED"
 fi
 
-echo "GET / " | openssl s_client -groups x448:x25519 -servername localhost -connect localhost:8443 -ign_eof -sess_in sess.pem | grep tls13-zig
+echo "GET / " | openssl s_client -groups ${DH_X448}X25519 -servername localhost -connect localhost:8443 -ign_eof -sess_in sess.pem | grep tls13-zig
 if [ $? -eq 0 ]; then
     echo "OK"
 else

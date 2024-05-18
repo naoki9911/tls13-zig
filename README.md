@@ -1,6 +1,6 @@
 # tls13-zig
 
-The first TLS1.3 implementation in Zig(master/HEAD) only with std.
+The first TLS1.3 implementation in Zig(0.12.0) only with std.
 
 
 This repository is an experimental implementation and is not intended for production use.

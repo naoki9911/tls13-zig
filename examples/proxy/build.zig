@@ -18,8 +18,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    exe.addAnonymousModule("tls13-server", .{
-        .source_file = .{ .path = "../../src/server.zig" },
+
+    exe.root_module.addAnonymousImport("tls13-server", .{
+        .root_source_file = .{ .path = "../../src/server.zig" },
     });
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default

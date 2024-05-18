@@ -1,6 +1,6 @@
 const std = @import("std");
 const io = std.io;
-const os = std.os;
+const posix = std.posix;
 const net = std.net;
 const dh = std.crypto.dh;
 const expect = std.testing.expect;
@@ -58,7 +58,7 @@ pub fn TLSServerImpl(comptime ReaderType: type, comptime WriterType: type, compt
     _ = WriterType;
     return struct {
         // io
-        tcp_listener: ?std.net.StreamServer = null,
+        tcp_listener: ?std.net.Server = null,
 
         // host
         host: []u8 = &([_]u8{}),
@@ -95,12 +95,12 @@ pub fn TLSServerImpl(comptime ReaderType: type, comptime WriterType: type, compt
 
         pub fn init(key_path: []const u8, cert_path: []const u8, ca_path: ?[]const u8, host: ?[]const u8, allocator: std.mem.Allocator) !Self {
             // ignore SIGPIPE
-            var act = os.Sigaction{
-                .handler = .{ .handler = os.SIG.IGN },
-                .mask = os.empty_sigset,
-                .flags = (os.SA.SIGINFO | os.SA.RESTART | os.SA.RESETHAND),
+            var act = posix.Sigaction{
+                .handler = .{ .handler = posix.SIG.IGN },
+                .mask = posix.empty_sigset,
+                .flags = (posix.SA.SIGINFO | posix.SA.RESTART | posix.SA.RESETHAND),
             };
-            try os.sigaction(os.SIG.PIPE, &act, null);
+            try posix.sigaction(posix.SIG.PIPE, &act, null);
 
             const cert = try certificate.CertificateEntry.fromFile(cert_path, allocator);
             errdefer cert.deinit();
@@ -146,17 +146,12 @@ pub fn TLSServerImpl(comptime ReaderType: type, comptime WriterType: type, compt
                 @memcpy(res.host, h);
             }
 
-            if (is_tcp) {
-                res.tcp_listener = std.net.StreamServer.init(.{});
-                res.tcp_listener.?.reuse_address = true;
-            }
-
             return res;
         }
 
         pub fn deinit(self: *Self) void {
             if (self.tcp_listener) |_| {
-                self.tcp_listener.?.close();
+                self.tcp_listener.?.deinit();
             }
             if (self.host.len != 0) {
                 self.allocator.free(self.host);
@@ -171,7 +166,9 @@ pub fn TLSServerImpl(comptime ReaderType: type, comptime WriterType: type, compt
 
         pub fn listen(self: *Self, port: u16) !void {
             if (is_tcp) {
-                try self.tcp_listener.?.listen(try std.net.Address.parseIp("0.0.0.0", port));
+                const listen_addr = try std.net.Address.parseIp("0.0.0.0", port);
+                const listen_opts = std.net.Address.ListenOptions{ .reuse_address = true };
+                self.tcp_listener = try listen_addr.listen(listen_opts);
             }
         }
 
@@ -199,7 +196,7 @@ pub fn TLSStreamImpl(comptime ReaderType: type, comptime WriterType: type, compt
         reader: ReaderType,
         writer: WriterType,
         write_buffer: io.BufferedWriter(4096, WriterType),
-        tcp_conn: ?std.net.StreamServer.Connection = null,
+        tcp_conn: ?std.net.Server.Connection = null,
 
         // session related
         random: [32]u8,
@@ -275,7 +272,7 @@ pub fn TLSStreamImpl(comptime ReaderType: type, comptime WriterType: type, compt
             return .{ .context = self };
         }
 
-        pub fn init(server: TLSServerType, tcp_conn: std.net.StreamServer.Connection, allocator: std.mem.Allocator) !Self {
+        pub fn init(server: TLSServerType, tcp_conn: std.net.Server.Connection, allocator: std.mem.Allocator) !Self {
             if (!is_tcp) {
                 return Error.NotTCP;
             }

@@ -12,7 +12,7 @@ TEST_CIPHER_SUITES=(
 )
 
 TEST_GROUPS=(
-    "x25519"
+    "X25519"
     "P-256"
 )
 
