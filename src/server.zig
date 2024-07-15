@@ -950,7 +950,7 @@ pub fn TLSStreamImpl(comptime ReaderType: type, comptime WriterType: type, compt
                     const skey = try P256.SecretKey.fromBytes(k.privateKey[0..P256.SecretKey.encoded_length].*);
                     const kp = try P256.KeyPair.fromSecretKey(skey);
                     const verify_sig = try kp.sign(verify_stream.getWritten(), null);
-                    var sig_buf: [P256.Signature.der_encoded_max_length]u8 = undefined;
+                    var sig_buf: [P256.Signature.der_encoded_length_max]u8 = undefined;
                     const sig_bytes = verify_sig.toDer(&sig_buf);
                     cv = try CertificateVerify.init(.ecdsa_secp256r1_sha256, sig_bytes.len, self.allocator);
                     @memcpy(cv.signature, sig_bytes);
