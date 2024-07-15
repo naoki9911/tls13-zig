@@ -11,7 +11,9 @@ pub fn build(b: *std.Build) void {
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
-
+    _ = b.addModule("tls13-zig", .{
+        .root_source_file = b.path("src/main.zig"),
+    });
     const exe = b.addExecutable(.{
         .name = "tls13-zig",
         .root_source_file = b.path("src/main.zig"),
