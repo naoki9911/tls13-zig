@@ -1,6 +1,6 @@
 # tls13-zig
 
-The first TLS1.3 implementation in Zig(0.12.0) only with std.
+The first TLS1.3 implementation in Zig(0.13.0) only with std.
 
 
 This repository is an experimental implementation and is not intended for production use.
@@ -185,4 +185,3 @@ This is simple TLS termination proxy using tls13-zig.
 This proxy terminates TLS1.3 and redirect contents to local server(localhost:8080).
 If you want to try this, simple executes `cd examples/proxy && docker compose up`.
 
-This sample works on [tls13.pibvt.net](https://tls13.pibvt.net)
