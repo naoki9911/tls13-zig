@@ -1,16 +1,20 @@
 const std = @import("std");
 const log = @import("log.zig");
 const utils = @import("utils.zig");
-const NamedGroupList = @import("supported_groups.zig").NamedGroupList;
-const SupportedVersions = @import("supported_versions.zig").SupportedVersions;
-const SignatureSchemeList = @import("signature_scheme.zig").SignatureSchemeList;
-const KeyShare = @import("key_share.zig").KeyShare;
+pub const NamedGroupList = @import("supported_groups.zig").NamedGroupList;
+pub const SupportedVersions = @import("supported_versions.zig").SupportedVersions;
+pub const SignatureSchemeList = @import("signature_scheme.zig").SignatureSchemeList;
+pub const KeyShare = @import("key_share.zig").KeyShare;
 const RecordSizeLimit = @import("record_size_limit.zig").RecordSizeLimit;
 const ServerNameList = @import("server_name.zig").ServerNameList;
 const HandshakeType = @import("handshake.zig").HandshakeType;
 const PreSharedKey = @import("pre_shared_key.zig").PreSharedKey;
 const PskKeyExchangeModes = @import("psk_key_exchange_modes.zig").PskKeyExchangeModes;
 const EarlyData = @import("early_data.zig").EarlyData;
+const RenegotiationInfo = @import("renegotiation_info.zig").RenegotiationInfo;
+const quic = @import("quic.zig");
+const StatusRequest = @import("status_request.zig").StatusRequest;
+const ALPN = @import("alpn.zig").ALPN;
 
 /// RFC8446 Section 4.2 Extensions
 ///
@@ -43,7 +47,7 @@ const EarlyData = @import("early_data.zig").EarlyData;
 pub const ExtensionType = enum(u16) {
     server_name = 0,
     // max_fragment_length = 1,
-    status_request = 5,
+    status_request = 5, // RFC6066, 6960, 8446
     supported_groups = 10,
     signature_algorithms = 13,
     // user_srtp = 14,
@@ -74,6 +78,9 @@ pub const ExtensionType = enum(u16) {
     session_ticket = 35,
     compress_certificate = 27,
     application_settings = 17513,
+
+    renegotiation_info = 0xFF01, // RFC5746
+    quic_transport_parameters = 0x0039, // RFC9001
 };
 
 /// RFC8446 Section 4.2 Extensions
@@ -85,10 +92,10 @@ pub const ExtensionType = enum(u16) {
 ///
 pub const Extension = union(ExtensionType) {
     server_name: ServerNameList,
-    status_request: Dummy,
+    status_request: StatusRequest,
     supported_groups: NamedGroupList,
     signature_algorithms: SignatureSchemeList,
-    application_layer_protocol_negotiation: Dummy,
+    application_layer_protocol_negotiation: ALPN,
     signed_certificate_timestamp: Dummy,
     record_size_limit: RecordSizeLimit,
     pre_shared_key: PreSharedKey,
@@ -106,6 +113,8 @@ pub const Extension = union(ExtensionType) {
     session_ticket: Dummy,
     compress_certificate: Dummy,
     application_settings: Dummy,
+    renegotiation_info: RenegotiationInfo,
+    quic_transport_parameters: quic.TransportParameters,
 
     const Self = @This();
     pub const HEADER_LENGTH = @sizeOf(u16) + @sizeOf(u16);
@@ -136,7 +145,7 @@ pub const Extension = union(ExtensionType) {
             .supported_versions => return Self{ .supported_versions = try SupportedVersions.decode(reader, ht) },
             .key_share => return Self{ .key_share = try KeyShare.decode(reader, allocator, ht, hello_retry) },
             .none => return Self{ .none = try Dummy.decode(reader, len) },
-            .application_layer_protocol_negotiation => return Self{ .application_layer_protocol_negotiation = try Dummy.decode(reader, len) },
+            .application_layer_protocol_negotiation => return Self{ .application_layer_protocol_negotiation = try ALPN.decode(reader, len, allocator) },
             .psk_key_exchange_modes => return Self{ .psk_key_exchange_modes = try PskKeyExchangeModes.decode(reader, allocator) },
             .post_handshake_auth => return Self{ .post_handshake_auth = try Dummy.decode(reader, len) },
             .ec_points_format => return Self{ .ec_points_format = try Dummy.decode(reader, len) },
@@ -144,13 +153,15 @@ pub const Extension = union(ExtensionType) {
             .encrypt_then_mac => return Self{ .encrypt_then_mac = try Dummy.decode(reader, len) },
             .extended_master_secret => return Self{ .extended_master_secret = try Dummy.decode(reader, len) },
             .padding => return Self{ .padding = try Dummy.decode(reader, len) },
-            .status_request => return Self{ .status_request = try Dummy.decode(reader, len) },
+            .status_request => return Self{ .status_request = try StatusRequest.decode(reader, len, allocator) },
             .signed_certificate_timestamp => return Self{ .signed_certificate_timestamp = try Dummy.decode(reader, len) },
             .session_ticket => return Self{ .session_ticket = try Dummy.decode(reader, len) },
             .compress_certificate => return Self{ .compress_certificate = try Dummy.decode(reader, len) },
             .application_settings => return Self{ .application_settings = try Dummy.decode(reader, len) },
             .pre_shared_key => return Self{ .pre_shared_key = try PreSharedKey.decode(reader, ht, allocator) },
             .early_data => return Self{ .early_data = try EarlyData.decode(reader, ht) },
+            .renegotiation_info => return Self{ .renegotiation_info = try RenegotiationInfo.decode(reader, allocator, len) },
+            .quic_transport_parameters => return Self{ .quic_transport_parameters = try quic.TransportParameters.decode(reader, len, allocator) },
         }
     }
 
@@ -183,6 +194,10 @@ pub const Extension = union(ExtensionType) {
             .pre_shared_key => |e| len += try e.encode(writer),
             .psk_key_exchange_modes => |e| len += try e.encode(writer),
             .early_data => |e| len += try e.encode(writer),
+            .application_layer_protocol_negotiation => |e| len += try e.encode(writer),
+            .status_request => |e| len += try e.encode(writer),
+            .renegotiation_info => |e| len += try e.encode(writer),
+            .quic_transport_parameters => |e| len += try e.encode(writer),
             .none => unreachable,
             else => unreachable,
         }
@@ -213,6 +228,10 @@ pub const Extension = union(ExtensionType) {
             .key_share => |e| e.deinit(),
             .pre_shared_key => |e| e.deinit(),
             .psk_key_exchange_modes => |e| e.deinit(),
+            .renegotiation_info => |e| e.deinit(),
+            .quic_transport_parameters => |e| e.deinit(),
+            .status_request => |e| e.deinit(),
+            .application_layer_protocol_negotiation => |e| e.deinit(),
             else => {},
         }
     }
@@ -225,6 +244,7 @@ pub const Extension = union(ExtensionType) {
             .record_size_limit => |e| e.print(),
             .supported_versions => |e| e.print(),
             .key_share => |e| e.print(),
+            .renegotiation_info => |e| e.print(),
             else => unreachable,
         }
     }

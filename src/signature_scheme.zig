@@ -42,6 +42,7 @@ const ArrayList = std.ArrayList;
 // } SignatureScheme;
 ///
 pub const SignatureScheme = enum(u16) {
+    ecdsa_sha1 = 0x0203,
     ecdsa_secp256r1_sha256 = 0x0403,
     ecdsa_secp384r1_sha384 = 0x0503,
     ecdsa_secp521r1_sha512 = 0x0603,

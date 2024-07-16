@@ -100,6 +100,7 @@ pub fn decodeExtensions(reader: anytype, allocator: std.mem.Allocator, extension
         for (extensions.items) |e| {
             e.deinit();
         }
+        extensions.clearAndFree();
     }
     const ext_len = try reader.readInt(u16, .big);
     var i: usize = 0;
