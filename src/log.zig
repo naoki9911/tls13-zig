@@ -38,8 +38,8 @@ pub fn log(
     };
 
     const stderr = std.io.getStdErr().writer();
-    std.debug.getStderrMutex().lock();
-    defer std.debug.getStderrMutex().unlock();
+    std.debug.lockStdErr();
+    defer std.debug.unlockStdErr();
     if (builtin.os.tag == .linux) {
         const pid = std.os.linux.getpid();
         nosuspend stderr.print(levelAsText(message_level) ++ " [{s} {}]: " ++ format ++ "\n", .{ date_str, pid } ++ args) catch return;

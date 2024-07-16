@@ -1,5 +1,5 @@
 const std = @import("std");
-const log = @import("log.zig");
+const log = @import("../log.zig");
 const x509 = @import("x509.zig");
 const cert = @import("cert.zig");
 const ArrayList = std.ArrayList;
@@ -112,7 +112,7 @@ pub const RootCA = struct {
     fn loadCAFilesMacOS(self: *Self) !void {
         log.debug("Loading RootCA certificate", .{});
 
-        const result = try std.ChildProcess.run(.{
+        const result = try std.process.Child.run(.{
             .allocator = self.allocator,
             .argv = &[_][]const u8{ "/usr/bin/security", "find-certificate", "-a", "-p", "/System/Library/Keychains/SystemRootCertificates.keychain" },
             .max_output_bytes = 1000 * 1024,
