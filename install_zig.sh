@@ -10,7 +10,7 @@ case "$unames" in
     *)          echo "Unknown HOST_ARCH=$(uname -s)"; exit 1;;
 esac
 
-ZIG_VERSION=0.12.0
+ZIG_VERSION=0.13.0
 ZIG_VERSIONS=$(curl https://ziglang.org/download/index.json)
 
 ZIG_MASTER_TAR=$(echo $ZIG_VERSIONS | jq -r ".\"$ZIG_VERSION\".\"$HOST_ARCH\".tarball")
@@ -43,3 +43,4 @@ if [ $? -ne 0 ]; then
     echo "PATH=\$PATH:$HOME/.local/zig-master" >> ~/.bashrc
 fi
 set -e
+
