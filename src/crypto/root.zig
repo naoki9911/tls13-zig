@@ -1,5 +1,5 @@
 const std = @import("std");
-const log = @import("log.zig");
+const log = @import("../log.zig");
 const x509 = @import("x509.zig");
 const cert = @import("cert.zig");
 const ArrayList = std.ArrayList;
