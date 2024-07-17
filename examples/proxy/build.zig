@@ -19,9 +19,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    exe.root_module.addAnonymousImport("tls13-server", .{
-        .root_source_file = b.path("../../src/server.zig"),
-    });
+    exe.root_module.addImport("tls13-server", b.dependency("tls13-zig", .{}).module("tls13-server"));
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).
