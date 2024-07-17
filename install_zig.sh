@@ -4,11 +4,20 @@ set -eux
 
 # Thanks to https://stackoverflow.com/questions/3466166/how-to-check-if-running-in-cygwin-mac-or-linux
 unames=$(uname -s)
+arch=$(uname -m)
 case "$unames" in
-    Linux*)     HOST_ARCH="x86_64-linux";;
-    Darwin*)    HOST_ARCH="x86_64-macos";;
+    Linux*)     OS="linux";;
+    Darwin*)    OS="macos";;
     *)          echo "Unknown HOST_ARCH=$(uname -s)"; exit 1;;
 esac
+
+case "$arch" in
+    x86_64*) ARCH="x86_64";;
+    arm64*)  ARCH="aarch64";;
+    *)       echo "Unknown $arch"; exit 1;;
+esac
+
+HOST_ARCH="$ARCH-$OS"
 
 ZIG_VERSION=0.13.0
 ZIG_VERSIONS=$(curl https://ziglang.org/download/index.json)

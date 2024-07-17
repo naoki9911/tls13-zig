@@ -2,8 +2,7 @@
 
 cd `dirname $0`
 
-brew install openssl
 brew install jq
-echo 'PATH=/usr/local/opt/openssl/bin:$PATH' >> ~/.bashrc
+brew install curl
 
 ./install_zig.sh
